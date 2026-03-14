@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  OPERATOR
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum PlanType {
+  STREAMING
+  MUSIC
+}
+
+enum Platform {
+  NETFLIX
+  SPOTIFY
+  DISNEY_PLUS
+  HBO_MAX
+  AMAZON_PRIME
+  YOUTUBE_PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  YAPE
+  PLIN
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique @db.VarChar(100)
+  name          String         @db.VarChar(80)
+  password      String
+  role          UserRole       @default(OPERATOR)
+  isActive      Boolean        @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  clients       Client[]
+  subscriptions Subscription[]
+  payments      Payment[]
+}
+
+model Client {
+  id            String         @id @default(uuid())
+  fullName      String         @db.VarChar(100)
+  email         String         @unique @db.VarChar(100)
+  phone         String         @db.VarChar(20)
+  dni           String         @unique @db.Char(8)
+  status        ClientStatus   @default(ACTIVE)
+  notes         String?        @db.VarChar(500)
+  createdById   String
+  createdBy     User           @relation(fields: [createdById], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+}
+
+model Plan {
+  id            String         @id @default(uuid())
+  name          String         @db.VarChar(80)
+  platform      Platform
+  type          PlanType
+  costPrice     Decimal        @db.Decimal(10, 2)
+  salePrice     Decimal        @db.Decimal(10, 2)
+  durationDays  Int
+  maxAccounts   Int
+  description   String?        @db.VarChar(200)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id          String             @id @default(uuid())
+  clientId    String
+  client      Client             @relation(fields: [clientId], references: [id])
+  planId      String
+  plan        Plan               @relation(fields: [planId], references: [id])
+  startDate   DateTime
+  endDate     DateTime
+  status      SubscriptionStatus @default(PENDING)
+  autoRenew   Boolean            @default(false)
+  credentials String?            @db.VarChar(255)
+  notes       String?            @db.VarChar(300)
+  createdById String
+  createdBy   User               @relation(fields: [createdById], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  payments    Payment[]
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id])
+  amount         Decimal       @db.Decimal(10, 2)
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  paidAt         DateTime?
+  dueDate        DateTime
+  reference      String?       @db.VarChar(100)
+  notes          String?       @db.VarChar(300)
+  recordedById   String
+  recordedBy     User          @relation(fields: [recordedById], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
