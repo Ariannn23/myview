@@ -1,9 +1,23 @@
 import { PrismaClient, UserRole, ClientStatus, Platform, PlanType, SubscriptionStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+import path from 'path';
 
-const prisma = new PrismaClient();
+dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  await prisma.payment.deleteMany();
+  await prisma.subscription.deleteMany();
+  await prisma.client.deleteMany();
+  await prisma.plan.deleteMany();
+  await prisma.user.deleteMany();
+
   const adminPassword = await bcrypt.hash('Admin123', 12);
   const operatorPassword = await bcrypt.hash('Operador123', 10);
 
@@ -197,4 +211,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });
